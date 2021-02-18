@@ -3,13 +3,22 @@ import os
 import itertools
 from pathlib import Path
 
-def batchExtract(textmap, args):
+def batchExtractChapters(textmap, args):
     chapterData = json.load(open(os.path.join(os.path.dirname(__file__), f'../data/Excel/ChapterExcelConfigData.json')))
     length = len(chapterData)
 
     for count, chapter in enumerate(chapterData):
         print(f'Chapter progress : {count+1}/{length} [{chapter["Id"]}]')
         chapterLogger(textmap, chapter['Id'], args)
+
+def batchExtractQuests(textmap, args):
+    questData = json.load(open(os.path.join(os.path.dirname(__file__), f'../data/Excel/MainQuestExcelConfigData.json')))
+    questData = list(filter(lambda x: x if "ChapterId" not in x else None, questData))
+    length = len(questData)
+
+    for count, quest in enumerate(questData):
+        print(f'Quest progress : {count+1}/{length} [{quest["Id"]}]')
+        questLogger(textmap, quest['Id'], args)
 
 
 def chapterLogger(textmap, chapterId, args):
@@ -76,7 +85,10 @@ def questLogger(textmap, questId, args, filePath=""):
         openmode = 'a'
     else:
         filePath = os.path.join(f'res/Quest - {textmap[str(mainquest[0]["TitleTextMapHash"])]} - {args.lang}.txt')
-        openmode = 'w'
+        if Path(filePath).is_file():    # In order to append to the existing file the new version of the quest
+            openmode = 'a'
+        else:
+            openmode = 'w'
 
     with open(filePath, openmode) as file:
 
@@ -91,7 +103,7 @@ def questLogger(textmap, questId, args, filePath=""):
 
         for subcount, q in enumerate(quest):
             # if q['SubId'] >= beginQuest and q['SubId'] <= endQuest:
-            print(f'Quest progress : {subcount+1}/{length} [{q["SubId"]}] ')
+            print(f'Objective progress : {subcount+1}/{length} [{q["SubId"]}] ')
             file.write(f'\n--> {textmap[str(q["DescTextMapHash"])]}\n\n')
 
             talk = list(filter(lambda d: d['Id'] == q['SubId'], files["TalkExcelConfigData"]))
@@ -99,11 +111,11 @@ def questLogger(textmap, questId, args, filePath=""):
                 dialog = list(filter(lambda d: (d['Id'] == t['InitDialog'] if 'InitDialog' in t else None), files["DialogExcelConfigData"]))
                 for d in dialog:
                     # Putting branchID=[0] explicitely, as using list.append() inside could cause problems
-                    dialogManager(textmap, d, files, file, 0, [0])
+                    dialogManager(textmap, d, files, file, [],  0, [0])
                     
         file.write("\n\n================================\n\n")
 
-def dialogManager(textmap, dialog, files, file, branchLevel=0, branchID=[0], limitID=-1):
+def dialogManager(textmap, dialog, files, file, IDList=[], branchLevel=0, branchID=[0], limitID=-1):
     # Just formatting
     leveling = ' '
     for _ in itertools.repeat(None, branchLevel):
@@ -111,15 +123,15 @@ def dialogManager(textmap, dialog, files, file, branchLevel=0, branchID=[0], lim
     leveling += ' '
 
     file.write(f'{str(branchID[branchLevel]) + leveling if branchID[branchLevel] > 0 else ""}[{dialog["Id"]}] {characterSearch(dialog, files["NpcExcelConfigData"], textmap)} : {textmap[str(dialog["TalkContentTextMapHash"])]}\n')
+    IDList.append(dialog['Id'])
     # print(f'{str(branchID[branchLevel]) + leveling if branchID[branchLevel] > 0 else ""}[{dialog["Id"]}] {characterSearch(dialog, files["NpcExcelConfigData"], textmap)} : {textmap[str(dialog["TalkContentTextMapHash"])]}')
     
     # Bug resolution : infinite recursion for chapterID=2010, when having the same ID in NextDialog than the current dialog
     # This is actually a problem from the Genshin data, the following lines will resolve this
     if dialog['Id'] == 105010427:
         dialog['NextDialogs'] = [105010428,105010429]
-    # nextDialog = list(filter(lambda f: ((f['Id'] in dialog['NextDialogs']) if f['Id'] != dialog['Id'] else None), files["DialogExcelConfigData"]))
 
-    nextDialog = list(filter(lambda f: f['Id'] in dialog['NextDialogs'], files["DialogExcelConfigData"]))
+    nextDialog = list(filter(lambda f: f['Id'] in list(filter(lambda d: d > dialog['Id'], dialog['NextDialogs'])), files["DialogExcelConfigData"]))
 
     if len(nextDialog) == 1:
         # When quest text go back to the first question (ex questID=309)
@@ -131,20 +143,21 @@ def dialogManager(textmap, dialog, files, file, branchLevel=0, branchID=[0], lim
         # If we're at the last branch nextDialog ID == limitID, then we're at the end of the branch
         elif branchID[branchLevel] > 0 and nextDialog[0]['Id'] == limitID:
             branchID.pop()
-            dialogManager(textmap, nextDialog[0], files, file, branchLevel-1, branchID)
+            dialogManager(textmap, nextDialog[0], files, file, IDList, branchLevel-1, branchID)
         # Else we have the normal behaviour
         else:
-            return dialogManager(textmap, nextDialog[0], files, file, branchLevel, branchID, limitID)
+            return dialogManager(textmap, nextDialog[0], files, file, IDList, branchLevel, branchID, limitID)
 
     elif len(nextDialog) > 1:
         limitID = -1
         branchID.append(1)
         for i, branch in enumerate(nextDialog):
             if i == 0:  # We get the limit ID
-                limitID = dialogManager(textmap, branch, files, file, branchLevel+1, branchID)
+                limitID = dialogManager(textmap, branch, files, file, IDList, branchLevel+1, branchID)
             else:   # And for the others, we stop at the limit ID found
-                branchID[branchLevel+1] = i+1
-                dialogManager(textmap, branch, files, file, branchLevel+1, branchID, limitID)
+                if branch['Id'] not in IDList:
+                    branchID[branchLevel+1] = i+1
+                    dialogManager(textmap, branch, files, file, IDList, branchLevel+1, branchID, limitID)
     return -1
         
 def characterSearch(dialog, npcexcel, textmap):
@@ -153,14 +166,11 @@ def characterSearch(dialog, npcexcel, textmap):
         if dialog["TalkRole"]["Type"] == "TALK_ROLE_PLAYER":
             return textmap["4100208827"]
         elif dialog["TalkRole"]["Type"] == "TALK_ROLE_NPC":
-            npcname = list(filter(lambda d: d['Id'] == int(dialog["TalkRole"]["Id"]), npcexcel))
-            return textmap[str(npcname[0]["NameTextMapHash"])]
+            if dialog["TalkRole"]['Id'] != "":
+                npcname = list(filter(lambda d: d['Id'] == int(dialog["TalkRole"]["Id"]), npcexcel))
+                return textmap[str(npcname[0]["NameTextMapHash"])]
+            return ""
     elif dialog["TalkRole"]["Id"] == "":
         if dialog["Id"] == 111000819:
             return textmap["4100208827"]
     return "" 
-
-def branchCondition(branch, limitID):
-    if limitID == -1:
-        return len(branch['NextDialogs']) > 0
-    return branch['NextDialogs'][0] != limitID
