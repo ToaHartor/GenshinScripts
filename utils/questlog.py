@@ -3,6 +3,8 @@ import os
 import itertools
 from pathlib import Path
 
+import utils.rewards as rewards
+
 def batchExtractChapters(textmap, args):
     chapterData = json.load(open(os.path.join(os.path.dirname(__file__), f'../data/Excel/ChapterExcelConfigData.json')))
     length = len(chapterData)
@@ -94,6 +96,12 @@ def questLogger(textmap, questId, args, filePath=""):
 
         file.write(f'Main Quest : {textmap[str(mainquest[0]["TitleTextMapHash"])]}\n\n')
         file.write(f'{textmap[str(mainquest[0]["DescTextMapHash"])]}\n\n')
+        # Writing rewards
+        text = ''
+        for r in mainquest[0]["RewardIdList"]:
+            text += rewards.rewardsFormatter(textmap, r) + "\n"
+        file.write(f'{textmap["276798818"]} : {text}\n' if len(mainquest[0]["RewardIdList"]) > 0 else "\n")
+
         print(f'Main Quest : {textmap[str(mainquest[0]["TitleTextMapHash"])]} [{mainquest[0]["Id"]}]')
 
         quest = list(filter(lambda d: d['MainId'] == questId, files["QuestExcelConfigData"]))
@@ -124,7 +132,6 @@ def dialogManager(textmap, dialog, files, file, IDList=[], branchLevel=0, branch
 
     file.write(f'{str(branchID[branchLevel]) + leveling if branchID[branchLevel] > 0 else ""}[{dialog["Id"]}] {characterSearch(dialog, files["NpcExcelConfigData"], textmap)} : {textmap[str(dialog["TalkContentTextMapHash"])]}\n')
     IDList.append(dialog['Id'])
-    # print(f'{str(branchID[branchLevel]) + leveling if branchID[branchLevel] > 0 else ""}[{dialog["Id"]}] {characterSearch(dialog, files["NpcExcelConfigData"], textmap)} : {textmap[str(dialog["TalkContentTextMapHash"])]}')
     
     # Bug resolution : infinite recursion for chapterID=2010, when having the same ID in NextDialog than the current dialog
     # This is actually a problem from the Genshin data, the following lines will resolve this
