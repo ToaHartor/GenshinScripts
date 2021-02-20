@@ -6,55 +6,105 @@ from pathlib import Path
 import utils.rewards as rewards
 
 def batchExtractChapters(textmap, args):
-    chapterData = json.load(open(os.path.join(os.path.dirname(__file__), f'../data/Excel/ChapterExcelConfigData.json')))
-    length = len(chapterData)
-
-    for count, chapter in enumerate(chapterData):
-        print(f'Chapter progress : {count+1}/{length} [{chapter["Id"]}]')
-        chapterLogger(textmap, chapter['Id'], args)
-
-def batchExtractQuests(textmap, args):
-    questData = json.load(open(os.path.join(os.path.dirname(__file__), f'../data/Excel/MainQuestExcelConfigData.json')))
-    questData = list(filter(lambda x: x if "ChapterId" not in x else None, questData))
-    length = len(questData)
-
-    for count, quest in enumerate(questData):
-        print(f'Quest progress : {count+1}/{length} [{quest["Id"]}]')
-        questLogger(textmap, quest['Id'], args)
-
-
-def chapterLogger(textmap, chapterId, args):
-    files = {"ChapterExcelConfigData": {},
-            "MainQuestExcelConfigData": {}}
+    # Loading all required json files
+    files = {"ChapterExcelConfigData": {},  #Chapter
+            "MainQuestExcelConfigData": {}, # Main Quest
+            "QuestExcelConfigData": {},
+            "TalkExcelConfigData": {},
+            "DialogExcelConfigData": {},
+            "NpcExcelConfigData": {},     # NPC Names
+            "RewardExcelConfigData": {},  #Rewards
+            "MaterialExcelConfigData": {}}
 
     for file in files:
         with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
             files[file] = json.load(json_file)
 
-    chapterQuest = list(filter(lambda d: d['Id'] == chapterId, files["ChapterExcelConfigData"]))
+    length = len(files["ChapterExcelConfigData"])
 
-    filePath = os.path.join(f'res/{textmap[str(chapterQuest[0]["ChapterNumTextMapHash"])]} - {args.lang}.txt')
+    for count, ch in enumerate(files["ChapterExcelConfigData"]):
+        print(f'Chapter progress : {count+1}/{length} [{ch["Id"]}]')
+        chapter(textmap, ch, files, args)
+
+def batchExtractQuests(textmap, args):
+    files = {"MainQuestExcelConfigData": {}, # Main Quest
+            "QuestExcelConfigData": {},
+            "TalkExcelConfigData": {},
+            "DialogExcelConfigData": {},
+            "NpcExcelConfigData": {},     # NPC Names
+            "RewardExcelConfigData": {},  #Rewards
+            "MaterialExcelConfigData": {}}
+
+    for file in files:
+        with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
+            files[file] = json.load(json_file)
+
+    questData = list(filter(lambda x: x if "ChapterId" not in x else None, files["MainQuestExcelConfigData"]))
+    length = len(questData)
+
+    for count, q in enumerate(questData):
+        print(f'Quest progress : {count+1}/{length} [{q["Id"]}]')
+        quest(textmap, q, files, args)
+
+def chapterLogger(textmap, chapterId, args):
+    files = {"ChapterExcelConfigData": {},  #Chapter
+            "MainQuestExcelConfigData": {}, # Main Quest
+            "QuestExcelConfigData": {},
+            "TalkExcelConfigData": {},
+            "DialogExcelConfigData": {},
+            "NpcExcelConfigData": {},     # NPC Names
+            "RewardExcelConfigData": {},  #Rewards
+            "MaterialExcelConfigData": {}}
+
+    for file in files:
+        with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
+            files[file] = json.load(json_file)
+    
+    chapterData = list(filter(lambda x: x['Id'] == chapterId, files["ChapterExcelConfigData"]))
+
+    chapter(textmap, chapterData[0], files, args)
+
+def chapter(textmap, ch, files, args):
+
+    filePath = os.path.join(f'res/{textmap[str(ch["ChapterNumTextMapHash"])]} - {args.lang}.txt')
     print(f'File written : {filePath}')
     # These two lines might be used later
     # beginQuest = chapterQuest[0]['BeginQuestId']
     # endQuest = chapterQuest[0]['EndQuestId']
-    print(f'{textmap[str(chapterQuest[0]["ChapterNumTextMapHash"])]} [{chapterId}]')
+    print(f'{textmap[str(ch["ChapterNumTextMapHash"])]} [{ch["Id"]}]')
     with open(filePath, 'w') as file:
-        file.write(f'{textmap[str(chapterQuest[0]["ChapterNumTextMapHash"])]}\n\n')
-        file.write(f'{textmap[str(chapterQuest[0]["ChapterTitleTextMapHash"])]}\n\n')
+        file.write(f'{textmap[str(ch["ChapterNumTextMapHash"])]}\n\n')
+        file.write(f'{textmap[str(ch["ChapterTitleTextMapHash"])]}\n\n')
     
     # Searching for the Chapter ID and associated quests
-    mainQuests = list(filter(lambda d: (d['ChapterId'] == chapterId if "ChapterId" in d else None), files["MainQuestExcelConfigData"]))
+    mainQuests = list(filter(lambda d: (d['ChapterId'] == ch['Id'] if "ChapterId" in d else None), files["MainQuestExcelConfigData"]))
     mainQuests = sorted(mainQuests, key=lambda i: i['Id'])
 
     length = len(mainQuests)
 
     for current, mq in enumerate(mainQuests):
         print(f'Progress : {current+1}/{length}')
-        questLogger(textmap, mq['Id'], args, filePath)
+        quest(textmap, mq, files, args, filePath)
 
 
-def questLogger(textmap, questId, args, filePath=""):
+def questLogger(textmap, questId, args):
+    files = {"MainQuestExcelConfigData": {}, # Main Quest
+            "QuestExcelConfigData": {},
+            "TalkExcelConfigData": {},
+            "DialogExcelConfigData": {},
+            "NpcExcelConfigData": {},     # NPC Names
+            "RewardExcelConfigData": {},  #Rewards
+            "MaterialExcelConfigData": {}}
+
+    for file in files:
+        with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
+            files[file] = json.load(json_file)
+    
+    mainquest = list(filter(lambda d: d['Id'] == questId, files["MainQuestExcelConfigData"]))
+
+    quest(textmap, mainquest[0], files, args)
+
+def quest(textmap, mainquest, files, args, filePath=""):
     #MainQuestExcelConfigData.json -> Contains Quest ID
     #TalkExcelConfigData.json  "QuestId" -> Quest ID in MainQuestExcelConfigData.json (Id)
     #                          "InitDialog" -> Beginning dialog ID in DialogExcelConfigData.json (Id)
@@ -69,24 +119,12 @@ def questLogger(textmap, questId, args, filePath=""):
     # In "TalkRole", if "Type" is "TALK_ROLE_PLAYER" then traveler is talking
     #                else if it's "TALK_ROLE_NPC", then "Id" corresponds to "Id" in NpcExcelConfigData.json (and then you get the NPC name) 
 
-    files = {"MainQuestExcelConfigData": {},
-            "QuestExcelConfigData": {},
-            "TalkExcelConfigData": {},
-            "DialogExcelConfigData": {},
-            "NpcExcelConfigData": {}}
-
-    for file in files:
-        with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
-            files[file] = json.load(json_file)
-
-    mainquest = list(filter(lambda d: d['Id'] == questId, files["MainQuestExcelConfigData"]))
-
-    # Checking if the file already exists. Useful to not overwrite the file for each quest when the function is called in chapterLogger()
+    # Checking if the file already exists. Useful to not overwrite the file for each quest when the function is called
     textfile = Path(filePath)
     if textfile.is_file():
         openmode = 'a'
     else:
-        filePath = os.path.join(f'res/Quest - {textmap[str(mainquest[0]["TitleTextMapHash"])]} - {args.lang}.txt')
+        filePath = os.path.join(f'res/{textmap["1672777464"]} - {textmap[str(mainquest["TitleTextMapHash"])]} - {args.lang}.txt')
         if Path(filePath).is_file():    # In order to append to the existing file the new version of the quest
             openmode = 'a'
         else:
@@ -94,24 +132,24 @@ def questLogger(textmap, questId, args, filePath=""):
 
     with open(filePath, openmode) as file:
 
-        file.write(f'Main Quest : {textmap[str(mainquest[0]["TitleTextMapHash"])]}\n\n')
-        file.write(f'{textmap[str(mainquest[0]["DescTextMapHash"])]}\n\n')
+        file.write(f'Main Quest : {textmap[str(mainquest["TitleTextMapHash"])]} [{mainquest["Id"]}]\n\n')
+        file.write(f'{textmap[str(mainquest["DescTextMapHash"])]}\n\n')
         # Writing rewards
         text = ''
-        for r in mainquest[0]["RewardIdList"]:
-            text += rewards.rewardsFormatter(textmap, r) + "\n"
-        file.write(f'{textmap["276798818"]} : {text}\n' if len(mainquest[0]["RewardIdList"]) > 0 else "\n")
+        for r in mainquest["RewardIdList"]:
+            text += rewards.rewardsFormatter(textmap, {"RewardExcelConfigData": files["RewardExcelConfigData"], "MaterialExcelConfigData": files["MaterialExcelConfigData"]}, r) + "\n"
+        file.write(f'{textmap["276798818"]} : {text}\n' if len(mainquest["RewardIdList"]) > 0 else "\n")
 
-        print(f'Main Quest : {textmap[str(mainquest[0]["TitleTextMapHash"])]} [{mainquest[0]["Id"]}]')
+        print(f'Main Quest : {textmap[str(mainquest["TitleTextMapHash"])]} [{mainquest["Id"]}]')
 
-        quest = list(filter(lambda d: d['MainId'] == questId, files["QuestExcelConfigData"]))
+        quest = list(filter(lambda d: d['MainId'] == mainquest['Id'], files["QuestExcelConfigData"]))
         quest = sorted(quest, key=lambda i: i['Order'])
 
         length = len(quest)
 
         for subcount, q in enumerate(quest):
             # if q['SubId'] >= beginQuest and q['SubId'] <= endQuest:
-            print(f'Objective progress : {subcount+1}/{length} [{q["SubId"]}] ')
+            print(f'Objective progress : {subcount+1}/{length} [{q["SubId"]}]')
             file.write(f'\n--> {textmap[str(q["DescTextMapHash"])]}\n\n')
 
             talk = list(filter(lambda d: d['Id'] == q['SubId'], files["TalkExcelConfigData"]))

@@ -15,7 +15,9 @@ def batchExtractAchievements(textmap, args):
 
 def categoryExtract(textmap, catOrderID, args):
     files = {"AchievementGoalExcelConfigData": {},
-            "AchievementExcelConfigData": {}}
+            "AchievementExcelConfigData": {},
+            "RewardExcelConfigData": {},
+            "MaterialExcelConfigData": {}}
 
     for file in files:
         with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
@@ -31,14 +33,14 @@ def categoryExtract(textmap, catOrderID, args):
     with open(os.path.join(f'res/{textmap["4154938841"]} - {textmap[str(category["NameTextMapHash"])]} - {args.lang}.txt'), 'w') as file:
         print(f'Achievements : {textmap[str(category["NameTextMapHash"])]}')
         file.write(f'{textmap["4154938841"]} : {textmap[str(category["NameTextMapHash"])]}\n\n')
-        file.write(f'{textmap["276798818"]} : {rewards.rewardsFormatter(textmap, category["FinishRewardId"])}\n' if "FinishRewardId" in category else "\n")
+        file.write(f'{textmap["276798818"]} : {rewards.rewardsFormatter(textmap, {"RewardExcelConfigData": files["RewardExcelConfigData"], "MaterialExcelConfigData": files["MaterialExcelConfigData"]}, category["FinishRewardId"])}\n' if "FinishRewardId" in category else "\n")
         file.write("\n================================\n\n")
         for count, ach in enumerate(categoryAchievements):
             print(f"Achievement progress: ({count+1}/{length})")
-            achievement(textmap, ach, file)
+            achievement(textmap, ach, files, file)
 
-def achievement(textmap, ach, file):
+def achievement(textmap, ach, files, file):
     file.write(f'[{ach["Id"]}] {textmap[str(ach["TitleTextMapHash"])]}\n\n')
     file.write(f'{textmap[str(ach["DescTextMapHash"])]}\n\n')
-    file.write(f'{textmap["276798818"]} : {rewards.rewardsFormatter(textmap, ach["FinishRewardId"])}\n')
+    file.write(f'{textmap["276798818"]} : {rewards.rewardsFormatter(textmap, {"RewardExcelConfigData": files["RewardExcelConfigData"], "MaterialExcelConfigData": files["MaterialExcelConfigData"]}, ach["FinishRewardId"])}\n')
     file.write("\n\n================================\n\n")
