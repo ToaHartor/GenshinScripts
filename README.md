@@ -2,10 +2,13 @@
 
 A collection of scripts to be used with the data from https://github.com/Dimbreath/GenshinData (huge thanks to them btw)
 
-## What does these scripts do
+## What can these scripts extract ?
 
-- Quests and chapters logging
-- more to come
+- Quests and chapters (logs and traveler choices)
+- Cooking recipes
+- Achievements
+
+And more to come...
 
 ## Requirements
 
@@ -22,6 +25,9 @@ GenshinScripts/     (main folder)
 | |-Excel/
 | | |-_.json
 | |  ...
+| |-Readable/       (books and items descriptions)
+|   |-{lang}/...
+|   ...
 | |-TextMap/
 |   |-text_.json
 |   ...
