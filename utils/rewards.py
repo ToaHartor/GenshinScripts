@@ -1,7 +1,7 @@
 import json
 import os
 
-def rewardLogger(textmap, rewardID):
+def rewardsLogger(textmap, rewardID):
     files = {"RewardExcelConfigData": {},
             "MaterialExcelConfigData": {}}
 
@@ -9,7 +9,7 @@ def rewardLogger(textmap, rewardID):
         with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
             files[file] = json.load(json_file)
     
-    rewardsFormatter(textmap, files, rewardID)
+    return rewardsFormatter(textmap, files, rewardID)
 
 def rewardsFormatter(textmap, files, rewardID):
 
