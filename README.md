@@ -4,9 +4,10 @@ A collection of scripts to be used with the data from https://github.com/Dimbrea
 
 ## What can these scripts extract ?
 
-- Quests and chapters (logs and traveler choices)
-- Cooking recipes
-- Achievements
+- Quests (Daily commissions and World Quests) and Chapters (Archon, Story and Event Quests) (.txt)
+- Cooking recipes (.txt)
+- Achievements (.txt)
+- Characters (.json)
 
 And more to come...
 
@@ -21,20 +22,20 @@ And more to come...
 - The files structure should look like this :
 ```
 GenshinScripts/     (main folder)
-|-data/             (from Dimbreath/GenshinData)
-| |-Excel/
-| | |-_.json
-| |  ...
-| |-Readable/       (books and items descriptions)
-|   |-{lang}/...
-|   ...
-| |-TextMap/
-|   |-text_.json
-|   ...
-|-utils/
-| |-_.py
-| ...
-|-main.py
-|-README.md
+├── data/             (from Dimbreath/GenshinData)
+│   ├── Excel/
+│   │   ├── _.json
+│   │   ...
+│   ├── Readable/       (books and items descriptions)
+│   │   ├── {lang}/...
+│   │   ...
+│   └── TextMap/
+│       ├──text_.json
+│       ...
+├── utils/
+│   ├── _.py
+│   ...
+├── main.py
+└── README.md
 ```
-- Now `main.py` can be used with the parameter `--lang EN|FR|JP|....` with the language being formatted like the textmaps in data/
+- Now `main.py` can be used with the parameter `--lang EN|FR|JP|....` with the language being formatted like the textmaps in `data/`. However this file can't be called directly in a terminal, but functions from the `utils/` scripts can be imported and called in this file.
