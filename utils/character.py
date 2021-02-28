@@ -3,9 +3,21 @@ import os
 import re
 
 def batchCharaExtract(textmap):
-    files = {"AvatarExcelConfigData": {},
-        "AvatarCodexExcelConfigData": {}
-        }
+    files = {"AvatarExcelConfigData": {}, # Main character excel
+            "AvatarCodexExcelConfigData": {}, # Release dates
+            "AvatarLevelExcelConfigData": {}, # Character XP requirements
+            "AvatarPromoteExcelConfigData": {}, # Character ascension buff
+            "AvatarSkillDepotExcelConfigData": {}, # Bindings between main excel and Talents/Skills/Constellations
+            "AvatarSkillExcelConfigData": {},  # Main Skill Excel
+            "AvatarTalentExcelConfigData": {}, # Character Talents
+            "AvatarCurveExcelConfigData": {}, # HP/ATK/DEF calculations
+            "AvatarPromoteExcelConfigData": {}, # Ascension const
+            "ProudSkillExcelConfigData": {}, # Skills
+            "MaterialExcelConfigData": {},   # Material Excel
+            "FetterInfoExcelConfigData": {},  # Character info
+            "FetterStoryExcelConfigData": {},  # Character stories
+            "FettersExcelConfigData": {}  # Character quotes
+            }
 
     for file in files:
         with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
@@ -17,8 +29,8 @@ def batchCharaExtract(textmap):
     length = len(releasedAvatars)
 
     for count, avatar in enumerate(releasedAvatars):
-        print(f"[{avatar['Id']}] Character ({count+1}/{length})")
-        characterExtraction(textmap, avatar['Id'])
+        print(f"[{avatar['Id']}] {textmap[str(avatar['NameTextMapHash'])]} ({count+1}/{length})")
+        character(textmap, avatar['Id'], files)
 
 
 def characterExtraction(textmap, charID):
@@ -41,6 +53,14 @@ def characterExtraction(textmap, charID):
     for file in files:
         with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
             files[file] = json.load(json_file)
+
+    character(textmap, charID, files)
+
+def character(textmap, charID, files):
+    # Fix for Beidou, Keqing, Noelle
+    correspondanceDict = {"charged attack cycling dmg": "charged attack spinning dmg",
+                        "lightning stiletto dmg ": "lightning stiletto dmg",
+                        "elemental burst dmg": "burst dmg"}
 
     avatarData = list(filter(lambda x: x['Id'] == charID, files["AvatarExcelConfigData"]))[0]
 
@@ -91,7 +111,7 @@ def characterExtraction(textmap, charID):
 
     # Retreiving skills
     skillsList = []
-    for sk in skills:
+    for skillNum, sk in enumerate(skills):
         main = list(filter(lambda x: x['Id'] == sk, files["AvatarSkillExcelConfigData"]))[0]
         # Retrieving data for each skill level
         skillDetails = list(filter(lambda x: x['ProudSkillGroupId'] == main["ProudSkillGroupId"], files["ProudSkillExcelConfigData"]))
@@ -106,15 +126,22 @@ def characterExtraction(textmap, charID):
         for count, skillLevel in enumerate(skillDetails):
             # Using a regex to filter the skill desc in the textmap to know how many parameters in ParamList correspond to the text.
             indexDesc, indexList = 0,0
+
+            paramList = paramListCorrecter(skillLevel['ParamList'], charID, skillNum)
+
             while textmap[str(skillLevel['ParamDescList'][indexDesc])] != '':
                 # Bugfix for normal attacks which use 5 hits instead of 6, the 6th would usually have a parameter of zero
-                while skillLevel['ParamList'][indexList] == 0.0:
+                while paramList[indexList] == 0.0:
                     indexList += 1
                 # Regex to find how many parameters correspond to the ParamDesc
                 res = re.findall(r'(\{param.*?\})', textmap[str(skillLevel['ParamDescList'][indexDesc])])
                 if res != None:
                     # Text without parameters will be our key
                     key = textmap[str(skillLevel['ParamDescList'][indexDesc])].split('|', 1)[0].lower()
+                    # Correspondance bugfix
+                    if key in correspondanceDict:
+                        key = correspondanceDict[key]
+
                     if key not in skillDict["Param"]:
                         skillDict["Param"][key] = {"Name": skillLevel['ParamDescList'][indexDesc], "Levels": []}
                     # For parameters needed for a single description
@@ -125,9 +152,9 @@ def characterExtraction(textmap, charID):
                         # If we already used the said parameter, then we get its value from the list 
                         if par in oldparams:
                             ind = oldparams.index(par)
-                            appParam = skillLevel['ParamList'][indexList-(i-ind)]
+                            appParam = paramList[indexList-(i-ind)]
                         else:
-                            appParam = skillLevel['ParamList'][indexList]
+                            appParam = paramList[indexList]
                             oldparams.append(par)
                             indexList += 1
                         paramlist.append(appParam)
@@ -207,6 +234,7 @@ def characterExtraction(textmap, charID):
         "Desc": avatarData["DescTextMapHash"],
         "CharaInfo": charainfo,
         "Weapon": avatarData["WeaponType"],
+        "Rarity": avatarData["QualityType"],
         "StaminaRecovery": avatarData["StaminaRecoverSpeed"],
         "BaseHP": avatarData["HpBase"],
         "BaseATK": avatarData["AttackBase"],
@@ -222,3 +250,76 @@ def characterExtraction(textmap, charID):
     # print(json_dict)
     with open(os.path.join(os.path.dirname(__file__), f'../res/{textmap[str(avatarData["NameTextMapHash"])]}.json'), 'w') as output_file:
         json.dump(json_dict, output_file)
+
+# A hardcoded function which corrects the paramList of some skills
+def paramListCorrecter(paramList, charaID, skillNum):
+    # Amber
+    if charaID == 10000021:
+        # Elemental Skill
+        if skillNum == 1:
+            paramList.pop(2)
+        # Elemental Burst
+        elif skillNum == 2:
+            paramList.insert(1, paramList.pop(3))
+            paramList.insert(2, paramList.pop(4))
+    # Barbara's Elemental Skill
+    elif charaID == 10000014 and skillNum == 1:
+        paramList.insert(0, paramList.pop(2))
+        paramList.insert(1, paramList.pop(3))
+    # Chongyun's Elemental Skill
+    elif charaID == 10000036 and skillNum == 1:
+        paramList.insert(2, paramList.pop(3))
+    # Diona
+    elif charaID == 10000039:
+        # Elemental Skill
+        if skillNum == 1:
+            paramList.insert(3, paramList.pop(5))
+        # Elemental Burst
+        elif skillNum == 2:
+            paramList.insert(4, paramList.pop(6))
+    # Klee
+    elif charaID == 10000029:
+        # Elemental Skill
+        if skillNum == 1:
+            paramList.pop(1)
+            paramList.pop(1)
+        # Elemental Burst
+        elif skillNum == 2:
+            paramList.insert(1, paramList.pop(4))
+            paramList.pop(4)
+    # Lisa's Elemental Skill
+    elif charaID == 10000006 and skillNum == 1:
+        paramList.insert(0, paramList.pop(5))
+        paramList.insert(1, paramList.pop(6))
+    # Mona's Elemental Burst
+    elif charaID == 10000041 and skillNum == 2:
+        paramList.insert(2, paramList.pop(9))
+        paramList.pop(3)
+    # Ningguang's Elemental Skill
+    elif charaID == 10000027 and skillNum == 1:
+        paramList.pop(0)
+        paramList.insert(0, paramList.pop(1))
+    # Noelle's Elemental Skill
+    elif charaID == 10000034 and skillNum == 1:
+        paramList.insert(0, paramList.pop(5))
+        paramList.insert(2, paramList.pop(6))
+        paramList.insert(4, paramList.pop(7))
+    # Qiqi
+    elif charaID == 10000035:
+        if skillNum == 1:
+            paramList.insert(0, paramList.pop(7))
+        elif skillNum == 2:
+            paramList.insert(0, paramList.pop(2))
+    # Tartaglia
+    elif charaID == 10000033:
+        # Normal Attack
+        if skillNum == 0:
+            paramList.insert(10, paramList.pop(13))
+        # Elemental Skill
+        elif skillNum == 1:
+            paramList.insert(10, paramList.pop(11))
+    # Xinyan's Elemental Burst
+    elif charaID == 10000044 and skillNum == 2:
+        paramList.insert(2, paramList.pop(4))
+
+    return paramList
