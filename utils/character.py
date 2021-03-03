@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from pathlib import Path
 
 def batchCharaExtract(textmap):
     files = {"AvatarExcelConfigData": {}, # Main character excel
@@ -247,8 +248,9 @@ def character(textmap, charID, files):
         "Constellations": constellations,
         "Materials": materialsDict
     }
-    # print(json_dict)
-    with open(os.path.join(os.path.dirname(__file__), f'../res/{textmap[str(avatarData["NameTextMapHash"])]}.json'), 'w') as output_file:
+
+    Path("res/Character/").mkdir(parents=True, exist_ok=True)
+    with open(os.path.join(os.path.dirname(__file__), f'../res/Character/{textmap[str(avatarData["NameTextMapHash"])]} [{charID}].json'), 'w') as output_file:
         json.dump(json_dict, output_file)
 
 # A hardcoded function which corrects the paramList of some skills

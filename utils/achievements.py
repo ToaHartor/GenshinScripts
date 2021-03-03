@@ -1,6 +1,8 @@
 import json
 import os
 
+from pathlib import Path
+
 import utils.rewards as rewards
 
 def batchExtractAchievements(textmap, args):
@@ -30,13 +32,14 @@ def categoryExtract(textmap, catOrderID, args):
     
     length = len(categoryAchievements)
 
-    with open(os.path.join(f'res/{textmap["4154938841"]} - {textmap[str(category["NameTextMapHash"])]} - {args.lang}.txt'), 'w') as file:
-        print(f'Achievements : {textmap[str(category["NameTextMapHash"])]}')
+    Path("res/Achievement/").mkdir(parents=True, exist_ok=True)
+    with open(os.path.join(f'res/Achievement/{textmap["4154938841"]} - {textmap[str(category["NameTextMapHash"])]} [{catOrderID}] - {args.lang}.txt'), 'w') as file:
+        print(f'[{catOrderID}] Achievements : {textmap[str(category["NameTextMapHash"])]}')
         file.write(f'{textmap["4154938841"]} : {textmap[str(category["NameTextMapHash"])]}\n\n')
         file.write(f'{textmap["276798818"]} : {rewards.rewardsFormatter(textmap, {"RewardExcelConfigData": files["RewardExcelConfigData"], "MaterialExcelConfigData": files["MaterialExcelConfigData"]}, category["FinishRewardId"])}\n' if "FinishRewardId" in category else "\n")
         file.write("\n================================\n\n")
         for count, ach in enumerate(categoryAchievements):
-            print(f"Achievement progress: ({count+1}/{length})")
+            print(f"[{ach['Id']}] Achievement progress: ({count+1}/{length})")
             achievement(textmap, ach, files, file)
 
 def achievement(textmap, ach, files, file):

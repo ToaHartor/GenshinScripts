@@ -1,6 +1,8 @@
 import json
 import os 
 
+from pathlib import Path
+
 def batchExtractRecipes(textmap, args):
     files = {"MaterialExcelConfigData": {},
             "CookBonusExcelConfigData": {},
@@ -11,10 +13,11 @@ def batchExtractRecipes(textmap, args):
         with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
             files[file] = json.load(json_file)
     
-    with open(os.path.join(f'res/{textmap["4091925326"]} - {args.lang}.txt'), 'w') as file:
+    Path("res/Recipe/").mkdir(parents=True, exist_ok=True)
+    with open(os.path.join(f'res/Recipe/{textmap["4091925326"]} - {args.lang}.txt'), 'w') as file:
         length = len(files["CookRecipeExcelConfigData"])
         for count, recipeData in enumerate(files["CookRecipeExcelConfigData"]):
-            print(f'Recipe ({count+1}/{length}) : {textmap[str(recipeData["NameTextMapHash"])]} [{recipeData["Id"]}]')
+            print(f'[{recipeData["Id"]}] Recipe ({count+1}/{length}) : {textmap[str(recipeData["NameTextMapHash"])]}')
             file.write(f'[{recipeData["Id"]}] {textmap[str(recipeData["NameTextMapHash"])]} ({recipeData["RankLevel"]}*)\n\n{textmap[str(recipeData["DescTextMapHash"])]}\n\n{textmap["1178114658"]} {recipeData["MaxProficiency"]}\n')
             
             # Cooking bonus

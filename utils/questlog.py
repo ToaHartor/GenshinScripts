@@ -10,10 +10,11 @@ def batchExtractChapters(textmap, args):
     files = {"ChapterExcelConfigData": {},  #Chapter
             "MainQuestExcelConfigData": {}, # Main Quest
             "QuestExcelConfigData": {},
+            "QuestSummarizationTextExcelConfigData": {}, # Quest summaries
             "TalkExcelConfigData": {},
             "DialogExcelConfigData": {},
             "NpcExcelConfigData": {},     # NPC Names
-            "RewardExcelConfigData": {},  #Rewards
+            "RewardExcelConfigData": {},  # Rewards
             "MaterialExcelConfigData": {}}
 
     for file in files:
@@ -29,10 +30,11 @@ def batchExtractChapters(textmap, args):
 def batchExtractQuests(textmap, args):
     files = {"MainQuestExcelConfigData": {}, # Main Quest
             "QuestExcelConfigData": {},
+            "QuestSummarizationTextExcelConfigData": {}, # Quest summaries
             "TalkExcelConfigData": {},
             "DialogExcelConfigData": {},
             "NpcExcelConfigData": {},     # NPC Names
-            "RewardExcelConfigData": {},  #Rewards
+            "RewardExcelConfigData": {},  # Rewards
             "MaterialExcelConfigData": {}}
 
     for file in files:
@@ -47,13 +49,14 @@ def batchExtractQuests(textmap, args):
         quest(textmap, q, files, args)
 
 def chapterLogger(textmap, chapterId, args):
-    files = {"ChapterExcelConfigData": {},  #Chapter
+    files = {"ChapterExcelConfigData": {},  # Chapter
             "MainQuestExcelConfigData": {}, # Main Quest
             "QuestExcelConfigData": {},
+            "QuestSummarizationTextExcelConfigData": {}, # Quest summaries
             "TalkExcelConfigData": {},
             "DialogExcelConfigData": {},
             "NpcExcelConfigData": {},     # NPC Names
-            "RewardExcelConfigData": {},  #Rewards
+            "RewardExcelConfigData": {},  # Rewards
             "MaterialExcelConfigData": {}}
 
     for file in files:
@@ -66,7 +69,9 @@ def chapterLogger(textmap, chapterId, args):
 
 def chapter(textmap, ch, files, args):
 
-    filePath = os.path.join(f'res/{textmap[str(ch["ChapterNumTextMapHash"])]} - {args.lang}.txt')
+    filePath = os.path.join(f'res/Chapter/{textmap[str(ch["ChapterNumTextMapHash"])]} [{ch["Id"]}] - {args.lang}.txt')
+    Path("res/Chapter/").mkdir(parents=True, exist_ok=True)
+
     print(f'File written : {filePath}')
     # These two lines might be used later
     # beginQuest = chapterQuest[0]['BeginQuestId']
@@ -90,6 +95,7 @@ def chapter(textmap, ch, files, args):
 def questLogger(textmap, questId, args):
     files = {"MainQuestExcelConfigData": {}, # Main Quest
             "QuestExcelConfigData": {},
+            "QuestSummarizationTextExcelConfigData": {}, # Quest summaries
             "TalkExcelConfigData": {},
             "DialogExcelConfigData": {},
             "NpcExcelConfigData": {},     # NPC Names
@@ -124,7 +130,8 @@ def quest(textmap, mainquest, files, args, filePath=""):
     if textfile.is_file():
         openmode = 'a'
     else:
-        filePath = os.path.join(f'res/{textmap["1672777464"]} - {textmap[str(mainquest["TitleTextMapHash"])]} - {args.lang}.txt')
+        filePath = os.path.join(f'res/Quest/{textmap["1672777464"]} - {textmap[str(mainquest["TitleTextMapHash"])]} [{mainquest["Id"]}] - {args.lang}.txt')
+        Path("res/Quest/").mkdir(parents=True, exist_ok=True)
         if Path(filePath).is_file():    # In order to append to the existing file the new version of the quest
             openmode = 'a'
         else:
@@ -151,6 +158,13 @@ def quest(textmap, mainquest, files, args, filePath=""):
             # if q['SubId'] >= beginQuest and q['SubId'] <= endQuest:
             print(f'Objective progress : {subcount+1}/{length} [{q["SubId"]}]')
             file.write(f'\n--> {textmap[str(q["DescTextMapHash"])]}\n\n')
+
+            # Finding a summary of the objective (if exists)
+            summary = list(filter(lambda x: x['Id'] == q["SubId"], files["QuestSummarizationTextExcelConfigData"]))
+            if len(summary) == 1:
+                file.write(f'{textmap[str(summary[0]["DescTextMapHash"])]}\n\n')
+            else:
+                file.write('\n\n')
 
             talk = list(filter(lambda d: d['Id'] == q['SubId'], files["TalkExcelConfigData"]))
             for t in talk:
