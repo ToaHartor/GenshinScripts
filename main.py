@@ -118,7 +118,7 @@ if __name__ == '__main__':
 
     parser_quest = subparser.add_parser("quest")
     parser_quest.add_argument("args", nargs='*', action=argCollector)
-    parser_quest.set_defaults(func=recipe)
+    parser_quest.set_defaults(func=quest)
 
     parser_chara = subparser.add_parser("character")
     parser_chara.add_argument("args", nargs='*', action=argCollector)

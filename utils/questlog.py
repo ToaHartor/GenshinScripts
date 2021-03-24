@@ -5,6 +5,8 @@ from pathlib import Path
 
 import utils.rewards as rewards
 
+hangoutChaptersIDs = [101401, 103201, 103601, 103401]
+
 def batchExtractChapters(textmap, args):
     # Loading all required json files
     files = {"ChapterExcelConfigData": {},  #Chapter
@@ -20,6 +22,9 @@ def batchExtractChapters(textmap, args):
     for file in files:
         with open(os.path.join(os.path.dirname(__file__), f'../data/Excel/{file}.json')) as json_file:
             files[file] = json.load(json_file)
+
+    # Skipping Hangout quests, as it has a different configuration
+    files["ChapterExcelConfigData"] = list(filter(lambda x:x["Id"] not in hangoutChaptersIDs, files["ChapterExcelConfigData"]))
 
     length = len(files["ChapterExcelConfigData"])
 
@@ -175,7 +180,7 @@ def quest(textmap, mainquest, files, args, filePath=""):
                     
         file.write("\n\n================================\n\n")
 
-def dialogManager(textmap, dialog, files, file, IDList=[], branchLevel=0, branchID=[0], limitID=-1):
+def dialogManager(textmap, dialog, files, file, IDList=[], branchLevel=0, branchID=[0], branchReturn=False, limitID=-1):
     # Just formatting
     leveling = ' '
     for _ in itertools.repeat(None, branchLevel):
@@ -190,33 +195,39 @@ def dialogManager(textmap, dialog, files, file, IDList=[], branchLevel=0, branch
     if dialog['Id'] == 105010427:
         dialog['NextDialogs'] = [105010428,105010429]
 
-    nextDialog = list(filter(lambda f: f['Id'] in list(filter(lambda d: d > dialog['Id'], dialog['NextDialogs'])), files["DialogExcelConfigData"]))
+    nextDialog = list(filter(lambda f: f['Id'] in dialog['NextDialogs'] and f['Id'] != dialog['Id'], files["DialogExcelConfigData"]))
 
     if len(nextDialog) == 1:
-        # When quest text go back to the first question (ex questID=309)
-        if dialog["Id"] > nextDialog[0]['Id']:
+        # If we're at the last branch nextDialog ID == limitID, then we're at the end of the branch
+        if nextDialog[0]['Id'] == limitID and branchReturn:
+            branchID.pop()
+            dialogManager(textmap, nextDialog[0], files, file, IDList, branchLevel-1, branchID, False)
+        # In the case of having the next ID as the end of the branch, but there is a branch remaining (ex: Chapter 1 Act 4)
+        elif nextDialog[0]['Id'] == limitID and not branchReturn:
             return -1
         # If IDs aren't consecutive for the first branch, then the next ID is the end of the branch
-        elif nextDialog[0]['Id'] != dialog['Id'] + 1:
+        elif nextDialog[0]['Id'] != dialog['Id'] + 1 and branchID[branchLevel] == 1:
             return nextDialog[0]['Id']
-        # If we're at the last branch nextDialog ID == limitID, then we're at the end of the branch
-        elif branchID[branchLevel] > 0 and nextDialog[0]['Id'] == limitID:
-            branchID.pop()
-            dialogManager(textmap, nextDialog[0], files, file, IDList, branchLevel-1, branchID)
+        # When quest text go back to the first question (ex questID=309)
+        elif dialog["Id"] > nextDialog[0]['Id'] and nextDialog[0]['Id'] in IDList:
+            return -1
         # Else we have the normal behaviour
         else:
-            return dialogManager(textmap, nextDialog[0], files, file, IDList, branchLevel, branchID, limitID)
+            return dialogManager(textmap, nextDialog[0], files, file, IDList, branchLevel, branchID, branchReturn, limitID)
 
     elif len(nextDialog) > 1:
         limitID = -1
         branchID.append(1)
+        branchReturn = False
         for i, branch in enumerate(nextDialog):
             if i == 0:  # We get the limit ID
-                limitID = dialogManager(textmap, branch, files, file, IDList, branchLevel+1, branchID)
+                limitID = dialogManager(textmap, branch, files, file, IDList, branchLevel+1, branchID, branchReturn)
             else:   # And for the others, we stop at the limit ID found
                 if branch['Id'] not in IDList:
+                    if i == len(nextDialog) - 1:
+                        branchReturn = True
                     branchID[branchLevel+1] = i+1
-                    dialogManager(textmap, branch, files, file, IDList, branchLevel+1, branchID, limitID)
+                    dialogManager(textmap, branch, files, file, IDList, branchLevel+1, branchID, branchReturn, limitID)
     return -1
         
 def characterSearch(dialog, npcexcel, textmap):
